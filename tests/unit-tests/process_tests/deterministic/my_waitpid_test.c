@@ -21,7 +21,8 @@ int main() {
     printf("[PARENT] Created child with pid=%d\n", child_pid);
 
     // Step 2: Create a fake PID (non-existent child)
-    pid_t fake_pid = child_pid + 10000;
+    // Note: In lind-wasm, MAX_CAGEID is 1024, so we must use a value < 1024
+    pid_t fake_pid = child_pid + 100;  // Use small offset instead of 10000
     printf("[PARENT] Will try to wait for fake pid=%d (not my child)\n", fake_pid);
 
     // Step 3: Try to waitpid on the fake PID
