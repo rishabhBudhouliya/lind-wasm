@@ -335,14 +335,20 @@ pub fn waitpid_syscall(
     }
     // if cageid is specified, then we need to look up the zombie list for the id
     else {
+        println!("[DEBUG waitpid] Looking for specific cage: {}", cageid_arg);
+        println!("[DEBUG waitpid] Current cage (parent): {}", cageid);
+        println!("[DEBUG waitpid] Zombie list length: {}", zombies.len());
+
         // first let's check if the cageid is in the zombie list
         if let Some(index) = zombies
             .iter()
             .position(|zombie| zombie.cageid == cageid_arg as u64)
         {
+            println!("[DEBUG waitpid] Found cage {} in zombie list at index {}", cageid_arg, index);
             // find the cage in zombie list, remove it from the list and break
             zombie_opt = Some(zombies.remove(index));
         } else {
+            println!("[DEBUG waitpid] Cage {} not in zombie list, checking if it exists...", cageid_arg);
             // if the cageid is not in the zombie list, then we know either
             // 1. the child is still running, or
             // 2. the cage has exited, but it is not the child of this cage, or
@@ -350,15 +356,21 @@ pub fn waitpid_syscall(
             // we need to make sure the child is still running, and it is the child of this cage
             let child = get_cage(cageid_arg as u64);
             if let Some(child_cage) = child {
+                println!("[DEBUG waitpid] Cage {} exists! Parent is: {}", cageid_arg, child_cage.parent);
+                println!("[DEBUG waitpid] My cageid is: {}", cage.cageid);
                 // make sure the child's parent is correct
                 if child_cage.parent != cage.cageid {
+                    println!("[DEBUG waitpid] ERROR: Cage {} parent mismatch! Expected {}, got {}",
+                             cageid_arg, cage.cageid, child_cage.parent);
                     return syscall_error(
                         Errno::ECHILD,
                         "waitpid",
                         "waited cage is not the child of the cage",
                     );
                 }
+                println!("[DEBUG waitpid] Cage {} is our child, entering wait loop...", cageid_arg);
             } else {
+                println!("[DEBUG waitpid] ERROR: Cage {} does not exist!", cageid_arg);
                 // cage does not exist
                 return syscall_error(Errno::ECHILD, "waitpid", "cage does not exist");
             }
