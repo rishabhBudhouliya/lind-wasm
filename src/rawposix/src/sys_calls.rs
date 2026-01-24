@@ -1054,10 +1054,12 @@ pub fn rawposix_start(verbosity: isize) {
     let _ = VERBOSE.set(verbosity); //assigned to suppress unused result warning
      unsafe{
         let tmp_path = CString::new("/tmp").unwrap();
-        libc::mkdir(tmp_path.as_ptr(), S_IEXEC);
-    }
+        libc::mkdir(tmp_path.as_ptr(), 0o755);
+        let ret =  libc::chroot(tmp_path.as_ptr());
 
-    let ret = unsafe {libc::chroot(tmp_path.as_ptr()) };
+        let root = CString::new("/").unwrap();
+        libc::chdir(root.as_ptr());
+    }
     cagetable_init();
 
     fdtables::register_close_handlers(FDKIND_KERNEL, fdtables::NULL_FUNC, kernel_close);
@@ -1065,7 +1067,7 @@ pub fn rawposix_start(verbosity: isize) {
     // Set up standard file descriptors for the init cage
     // TODO:
     // Replace the hardcoded values with variables (possibly by adding a LIND-specific constants file)
-    let dev_null = CString::new(format!("{}/dev/null", LIND_ROOT)).unwrap();
+    let dev_null = CString::new("/dev/null").unwrap();
 
     // Make sure that the standard file descriptors (stdin, stdout, stderr) are always valid
     // Standard input (fd = 0) is redirected to /dev/null
